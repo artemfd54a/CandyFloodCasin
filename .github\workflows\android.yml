@@ -1,0 +1,67 @@
+name: Android Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+env:
+  PYTHONFORANDROID_PREREQUISITES_INSTALL_INTERACTIVE: "0"
+
+jobs:
+  build:
+    name: Build Candy.flood APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.x"
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Buildozer
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install buildozer
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt update
+          sudo apt -y install automake libltdl-dev
+
+      - name: Check project
+        run: |
+          test -f main.py
+          test -f buildozer.spec
+          echo "Project files OK"
+          buildozer --version
+
+      - name: Prepare Android SDK, NDK and p4a
+        run: |
+          buildozer android p4a -- --help
+
+      - name: Build debug APK
+        env:
+          BUILDOZER_ALLOW_ORG_TEST_DOMAIN: "1"
+        run: |
+          touch main.py
+          buildozer android debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Candy-flood-APK
+          path: bin/*.apk
+          if-no-files-found: error
+          retention-days: 14
+
